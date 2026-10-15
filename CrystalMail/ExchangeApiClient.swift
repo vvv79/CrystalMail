@@ -441,13 +441,34 @@ final class ExchangeApiClient: NSObject {
     }
 }
 
-extension ExchangeApiClient: URLSessionDelegate {
+extension ExchangeApiClient: URLSessionTaskDelegate {
     func urlSession(
         _ session: URLSession,
         didReceive challenge: URLAuthenticationChallenge,
         completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void
     ) {
-        if let trust = challenge.protectionSpace.serverTrust {
+        ExchangeApiClient.respond(to: challenge, completionHandler)
+    }
+
+    func urlSession(
+        _ session: URLSession,
+        task: URLSessionTask,
+        didReceive challenge: URLAuthenticationChallenge,
+        completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void
+    ) {
+        ExchangeApiClient.respond(to: challenge, completionHandler)
+    }
+
+    static func respond(
+        to challenge: URLAuthenticationChallenge,
+        _ completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void
+    ) {
+        if challenge.protectionSpace.authenticationMethod == NSURLAuthenticationMethodServerTrust,
+           let trust = challenge.protectionSpace.serverTrust {
+            if let chain = SecTrustCopyCertificateChain(trust) as? [SecCertificate], let leaf = chain.first {
+                SecTrustSetAnchorCertificates(trust, [leaf] as CFArray)
+                SecTrustSetAnchorCertificatesOnly(trust, false)
+            }
             completionHandler(.useCredential, URLCredential(trust: trust))
         } else {
             completionHandler(.performDefaultHandling, nil)
