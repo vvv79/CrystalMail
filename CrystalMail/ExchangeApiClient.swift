@@ -8,6 +8,11 @@ final class ExchangeApiClient: NSObject {
         var contentType: String
     }
 
+    struct LoginResult {
+        var canary: String
+        var mailbox: String
+    }
+
     enum ApiError: LocalizedError {
         case authRequired(String)
         case invalidUrl
@@ -64,12 +69,11 @@ final class ExchangeApiClient: NSObject {
     // MARK: - Login
 
     @discardableResult
-    func login(login: String, password: String) async throws -> String {
+    func login(login: String, password: String) async throws -> LoginResult {
         let base = session.serverUrl.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
         guard let host = URL(string: base)?.host else { throw ApiError.invalidUrl }
 
-        let authUrl = base + "/auth.owa"
-        guard let url = URL(string: authUrl) else { throw ApiError.invalidUrl }
+        guard let url = URL(string: base + "/owa/auth.owa") else { throw ApiError.invalidUrl }
 
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
@@ -88,13 +92,50 @@ final class ExchangeApiClient: NSObject {
         ]
         req.httpBody = parts.joined(separator: "&").data(using: .utf8)
 
-        _ = try await urlSession.data(for: req)
+        let (data, response) = try await urlSession.data(for: req)
+        let http = response as? HTTPURLResponse
+        let finalUrl = (http?.url?.absoluteString ?? "").lowercased()
+        let html = String(data: data, encoding: .utf8) ?? ""
+
+        if finalUrl.contains("logon.aspx") || finalUrl.contains("reason=2") || finalUrl.contains("reason=1") {
+            throw ApiError.loginFailed
+        }
+
+        // Determine mailbox
+        var mailbox = login
+        if let parsed = parseMailbox(from: html) {
+            mailbox = parsed
+        } else if let owaUrl = URL(string: base + "/owa/"),
+                  let (pageData, _) = try? await urlSession.data(from: owaUrl),
+                  let pageHtml = String(data: pageData, encoding: .utf8),
+                  let parsed = parseMailbox(from: pageHtml) {
+            mailbox = parsed
+        }
 
         let canary = canaryValue()
         if canary.isEmpty {
             throw ApiError.loginFailed
         }
-        return canary
+        return LoginResult(canary: canary, mailbox: mailbox)
+    }
+
+    private func parseMailbox(from html: String) -> String? {
+        let patterns = [
+            "<meta[^>]*name=[\"']owa_mailbox[\"'][^>]*content=[\"']([^\"']+)[\"']",
+            "name=[\"']owa_mailbox[\"'][^>]*content=[\"']([^\"']+)[\"']",
+            "\"mailbox\":\"([^\"@]+@[^\"]+)\""
+        ]
+        for pattern in patterns {
+            if let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]) {
+                let range = NSRange(html.startIndex..<html.endIndex, in: html)
+                if let match = regex.firstMatch(in: html, options: [], range: range),
+                   match.numberOfRanges > 1,
+                   let r = Range(match.range(at: 1), in: html) {
+                    return String(html[r])
+                }
+            }
+        }
+        return nil
     }
 
     private func urlEncode(_ s: String) -> String {

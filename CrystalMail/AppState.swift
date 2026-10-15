@@ -24,6 +24,25 @@ final class AppState: ObservableObject {
         isLoggedIn = true
     }
 
+    func login(serverUrl: String, domain: String, login: String, password: String) async -> (Bool, String) {
+        AppSettings.shared.serverUrl = serverUrl
+        AppSettings.shared.domain = domain
+        AppSettings.shared.fullLogin = login
+        CredentialStore.shared.password = password
+        isLoading = true
+        defer { isLoading = false }
+        do {
+            let s = MailSession(serverUrl: serverUrl, mailbox: login, domain: domain, displayName: "")
+            let client = ExchangeApiClient(session: s)
+            let result = try await client.login(login: login, password: password)
+            AppSettings.shared.mailbox = result.mailbox.isEmpty ? login : result.mailbox
+            isLoggedIn = true
+            return (true, "")
+        } catch {
+            return (false, error.localizedDescription)
+        }
+    }
+
     func logout() {
         AppSettings.shared.clearSession()
         CredentialStore.shared.password = ""
