@@ -1,0 +1,14 @@
+# Xcode
+build/
+DerivedData/
+*.xcodeproj
+*.xcworkspace
+xcuserdata/
+*.ipa
+Payload/
+
+# macOS
+.DS_Store
+
+# XcodeGen
+# (project.yml остаётся в репозитории, .xcodeproj генерируется на сервере)

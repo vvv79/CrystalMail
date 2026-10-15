@@ -1,0 +1,37 @@
+workflows:
+  ios-unsigned:
+    name: CrystalMail iOS (unsigned)
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    environment:
+      xcode: latest
+      vars:
+        XCODE_PROJECT: CrystalMail.xcodeproj
+        XCODE_SCHEME: CrystalMail
+    scripts:
+      - name: Install XcodeGen
+        script: |
+          brew install xcodegen
+      - name: Generate Xcode project
+        script: |
+          xcodegen generate
+      - name: Build unsigned .app
+        script: |
+          xcodebuild \
+            -project "$XCODE_PROJECT" \
+            -scheme "$XCODE_SCHEME" \
+            -configuration Debug \
+            -sdk iphoneos \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            build
+      - name: Package unsigned .ipa
+        script: |
+          rm -rf Payload
+          mkdir -p Payload
+          cp -R build/Build/Products/Debug-iphoneos/CrystalMail.app Payload/
+          zip -r CrystalMail-unsigned.ipa Payload
+    artifacts:
+      - CrystalMail-unsigned.ipa
