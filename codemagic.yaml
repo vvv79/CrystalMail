@@ -17,6 +17,7 @@ workflows:
           xcodegen generate
           echo "===== GENERATED Info.plist ====="
           plutil -p CrystalMail/Info.plist || cat CrystalMail/Info.plist
+          (plutil -p CrystalMail/Info.plist || cat CrystalMail/Info.plist) > generated_info_plist.txt 2>&1
       - name: Build unsigned .app
         script: |
           set +e
@@ -35,7 +36,8 @@ workflows:
           grep -n "error:" build.log || echo "строк 'error:' нет"
           echo "=========== BUILD EXIT CODE: $STATUS ==========="
           echo "===== APP Info.plist (ATS) ====="
-          plutil -p build/Build/Products/Debug-iphoneos/CrystalMail.app/Info.plist || true
+          (plutil -p build/Build/Products/Debug-iphoneos/CrystalMail.app/Info.plist || true) > app_info_plist.txt 2>&1
+          cat app_info_plist.txt || true
           if [ $STATUS -ne 0 ]; then
             echo "=========== TAIL OF LOG ==========="
             tail -n 40 build.log
@@ -50,3 +52,5 @@ workflows:
     artifacts:
       - CrystalMail-unsigned.ipa
       - build.log
+      - generated_info_plist.txt
+      - app_info_plist.txt
