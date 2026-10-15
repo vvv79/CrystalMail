@@ -40,6 +40,14 @@ struct LoginView: View {
                 .disabled(serverMissing || fullLogin.isEmpty || password.isEmpty || loggingIn)
                 .padding(.top, 8)
 
+                Button("Открыть OWA в Safari") {
+                    if let url = URL(string: defaultServerUrl + "/owa/") {
+                        UIApplication.shared.open(url)
+                    }
+                }
+                .font(.footnote)
+                .frame(maxWidth: .infinity, alignment: .center)
+
                 if loggingIn {
                     HStack(spacing: 8) {
                         ProgressView()
