@@ -38,6 +38,7 @@ final class ExchangeApiClient: NSObject {
 
     init(session: MailSession) {
         self.session = session
+        super.init()
     }
 
     // MARK: - URL / cookies
@@ -152,10 +153,10 @@ final class ExchangeApiClient: NSObject {
     }
 
     func relogin() async throws -> Bool {
-        let login = AppSettings.shared.fullLogin
-        let password = CredentialStore.shared.password
-        if login.isEmpty || password.isEmpty { return false }
-        _ = try? await login(login: login, password: password)
+        let loginName = AppSettings.shared.fullLogin
+        let passwordValue = CredentialStore.shared.password
+        if loginName.isEmpty || passwordValue.isEmpty { return false }
+        _ = try? await self.login(login: loginName, password: passwordValue)
         return !canaryValue().isEmpty
     }
 
