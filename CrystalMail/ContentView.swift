@@ -1,20 +1,22 @@
 import SwiftUI
 
-struct ContentView: View {
+struct RootView: View {
+    @EnvironmentObject var app: AppState
+
     var body: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "envelope.fill")
-                .font(.system(size: 56))
-                .foregroundColor(.accentColor)
-            Text("CrystalMail")
-                .font(.largeTitle)
-                .bold()
-            Text("iOS-версия — проверка сборки")
-                .foregroundColor(.secondary)
-            Text("Если ты видишь этот экран на iPad — цепочка сборки работает.")
-                .multilineTextAlignment(.center)
-                .padding(.horizontal)
+        if app.isLoggedIn {
+            MainView()
+        } else {
+            LoginView()
         }
-        .padding()
+    }
+}
+
+struct MainView: View {
+    var body: some View {
+        NavigationView {
+            FolderListView()
+        }
+        .navigationViewStyle(StackNavigationViewStyle())
     }
 }
