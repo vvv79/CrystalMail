@@ -49,6 +49,9 @@ final class AppState: ObservableObject {
             } else {
                 msg += " ATS:none"
             }
+            msg += " chal:" + ExchangeApiClient.lastChallengeMethod
+            msg += " trustOK:" + String(ExchangeApiClient.lastTrustOK)
+            msg += " trustErr:" + ExchangeApiClient.lastTrustError
             return (false, msg)
         }
     }

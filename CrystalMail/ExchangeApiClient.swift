@@ -469,10 +469,15 @@ extension ExchangeApiClient: URLSessionTaskDelegate {
         return [cert]
     }
 
+    static var lastChallengeMethod = "-"
+    static var lastTrustOK = false
+    static var lastTrustError = "-"
+
     static func respond(
         to challenge: URLAuthenticationChallenge,
         _ completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void
     ) {
+        lastChallengeMethod = challenge.protectionSpace.authenticationMethod
         if challenge.protectionSpace.authenticationMethod == NSURLAuthenticationMethodServerTrust,
            let trust = challenge.protectionSpace.serverTrust {
             let anchors = trustAnchors()
@@ -480,6 +485,9 @@ extension ExchangeApiClient: URLSessionTaskDelegate {
                 SecTrustSetAnchorCertificates(trust, anchors as CFArray)
                 SecTrustSetAnchorCertificatesOnly(trust, true)
             }
+            var err: CFError?
+            lastTrustOK = SecTrustEvaluateWithError(trust, &err)
+            lastTrustError = err.map { ($0 as Error).localizedDescription } ?? "-"
             completionHandler(.useCredential, URLCredential(trust: trust))
         } else {
             completionHandler(.performDefaultHandling, nil)
