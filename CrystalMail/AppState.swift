@@ -44,6 +44,11 @@ final class AppState: ObservableObject {
             if let under = ns.userInfo[NSUnderlyingErrorKey] as? NSError {
                 msg += " >> " + under.localizedDescription
             }
+            if let ats = Bundle.main.object(forInfoDictionaryKey: "NSAppTransportSecurity") as? [String: Any] {
+                msg += " ATS:" + ats.description
+            } else {
+                msg += " ATS:none"
+            }
             return (false, msg)
         }
     }
