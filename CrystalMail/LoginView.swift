@@ -144,15 +144,29 @@ struct OWAWebLoginView: UIViewRepresentable {
         }
 
         private var loginField: String {
-            if let at = parent.login.firstIndex(of: "@") {
-                return String(parent.login[parent.login.startIndex..<at])
+            parent.login
+        }
+
+        func webView(_ webView: WKWebView, didReceive challenge: URLAuthenticationChallenge,
+                     completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) {
+            if let trust = challenge.protectionSpace.serverTrust {
+                completionHandler(.useCredential, URLCredential(trust: trust))
+            } else {
+                completionHandler(.performDefaultHandling, nil)
             }
-            return parent.login
         }
 
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
             injectCredentials(into: webView)
             startPolling(webView)
+        }
+
+        func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
+            DispatchQueue.main.async { self.parent.status = "Ошибка загрузки: \(error.localizedDescription)" }
+        }
+
+        func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+            DispatchQueue.main.async { self.parent.status = "Ошибка: \(error.localizedDescription)" }
         }
 
         private func jsEscape(_ s: String) -> String {
