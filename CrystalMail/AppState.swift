@@ -39,7 +39,12 @@ final class AppState: ObservableObject {
             isLoggedIn = true
             return (true, "")
         } catch {
-            return (false, error.localizedDescription)
+            let ns = error as NSError
+            var msg = ns.localizedDescription + " [" + ns.domain + " " + String(ns.code) + "]"
+            if let under = ns.userInfo[NSUnderlyingErrorKey] as? NSError {
+                msg += " >> " + under.localizedDescription
+            }
+            return (false, msg)
         }
     }
 
