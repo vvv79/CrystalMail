@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct LoginView: View {
     @EnvironmentObject var app: AppState
@@ -50,10 +51,26 @@ struct LoginView: View {
                 }
 
                 if let error = app.errorMessage {
-                    Text(error)
-                        .foregroundColor(.red)
+                    VStack(spacing: 8) {
+                        Text(String(error.prefix(4)))
+                            .font(.system(size: 40, weight: .bold, design: .monospaced))
+                            .foregroundColor(.red)
+
+                        Text(error)
+                            .font(.footnote)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                            .textSelection(.enabled)
+
+                        Button("Скопировать текст ошибки") {
+                            UIPasteboard.general.string = error
+                        }
                         .font(.footnote)
-                        .frame(maxWidth: .infinity, alignment: .center)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(12)
+                    .background(Color(.secondarySystemBackground))
+                    .cornerRadius(10)
                 }
             }
             .padding(24)

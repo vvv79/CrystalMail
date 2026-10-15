@@ -40,18 +40,20 @@ final class AppState: ObservableObject {
             return (true, "")
         } catch {
             let ns = error as NSError
-            var msg = ns.localizedDescription + " [" + ns.domain + " " + String(ns.code) + "]"
-            if let under = ns.userInfo[NSUnderlyingErrorKey] as? NSError {
-                msg += " >> " + under.localizedDescription
-            }
-            if let ats = Bundle.main.object(forInfoDictionaryKey: "NSAppTransportSecurity") as? [String: Any] {
-                msg += " ATS:" + ats.description
+            let diag: String
+            if ExchangeApiClient.lastChallengeMethod == "-" {
+                diag = "T0"
+            } else if ExchangeApiClient.lastChallengeMethod == NSURLAuthenticationMethodServerTrust {
+                diag = ExchangeApiClient.lastTrustOK ? "T1" : "T2"
             } else {
-                msg += " ATS:none"
+                diag = "T3"
             }
-            msg += " chal:" + ExchangeApiClient.lastChallengeMethod
-            msg += " trustOK:" + String(ExchangeApiClient.lastTrustOK)
-            msg += " trustErr:" + ExchangeApiClient.lastTrustError
+            var msg = diag + " | " + ns.domain + " " + String(ns.code) + " | " + ns.localizedDescription
+            msg += " | chal=" + ExchangeApiClient.lastChallengeMethod
+            msg += " trust=" + String(ExchangeApiClient.lastTrustOK)
+            if ExchangeApiClient.lastTrustError != "-" {
+                msg += " err=" + ExchangeApiClient.lastTrustError
+            }
             return (false, msg)
         }
     }
