@@ -169,9 +169,9 @@ struct OWAWebLoginView: UIViewRepresentable {
                     return false;
                 }
                 fill('username','\(loginField)');
-                fill('password','\(password)');
+                fill('password','\(parent.password)');
                 fill('loginfmt','\(loginField)');
-                fill('passwd','\(password)');
+                fill('passwd','\(parent.password)');
                 var btn = document.getElementById('SubmitCreds') || document.querySelector('input[type="submit"]') || document.querySelector('button[type="submit"]');
                 if (btn) { setTimeout(function(){ btn.click(); }, 200); }
                 else { var f = document.querySelector('form'); if (f) f.submit(); }
