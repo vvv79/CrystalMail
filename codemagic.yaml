@@ -17,6 +17,7 @@ workflows:
           xcodegen generate
       - name: Build unsigned .app
         script: |
+          set +e
           xcodebuild \
             -project "$XCODE_PROJECT" \
             -scheme "$XCODE_SCHEME" \
@@ -26,7 +27,16 @@ workflows:
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" \
-            build
+            build > build.log 2>&1
+          STATUS=$?
+          echo "=========== ERRORS (скопируй эти строки) ==========="
+          grep -n "error:" build.log || echo "строк 'error:' нет"
+          echo "=========== BUILD EXIT CODE: $STATUS ==========="
+          if [ $STATUS -ne 0 ]; then
+            echo "=========== TAIL OF LOG ==========="
+            tail -n 40 build.log
+            exit $STATUS
+          fi
       - name: Package unsigned .ipa
         script: |
           rm -rf Payload
@@ -35,3 +45,4 @@ workflows:
           zip -r CrystalMail-unsigned.ipa Payload
     artifacts:
       - CrystalMail-unsigned.ipa
+      - build.log

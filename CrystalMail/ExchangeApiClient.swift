@@ -77,7 +77,7 @@ final class ExchangeApiClient: NSObject {
         req.setValue(userAgent, forHTTPHeaderField: "User-Agent")
 
         let dest = "https://\(host)/owa/"
-        let parts = [
+        let parts: [String] = [
             "destination=" + urlEncode(dest),
             "flags=0",
             "forcedownlevel=0",
@@ -169,126 +169,139 @@ final class ExchangeApiClient: NSObject {
     }
 
     private func defaultHeader() -> [String: Any] {
-        [
-            "__type": "ExchangeImpersonation:#Exchange",
-            "ConnectingSID": [
-                "__type": "ConnectingSID:#Exchange",
-                "SmtpAddress": session.mailbox
-            ]
+        let sid: [String: Any] = [
+            "__type": "ConnectingSID:#Exchange",
+            "SmtpAddress": session.mailbox
         ]
+        let header: [String: Any] = [
+            "__type": "ExchangeImpersonation:#Exchange",
+            "ConnectingSID": sid
+        ]
+        return header
+    }
+
+    private func itemShape() -> [String: Any] {
+        let shape: [String: Any] = [
+            "__type": "ItemResponseShape:#Exchange",
+            "BaseShape": "AllProperties"
+        ]
+        return shape
     }
 
     // MARK: - Operations
 
     func findItems(folderId: String, maxCount: Int = 50, offset: Int = 0) async throws -> String {
-        let item: [String: Any] = [
+        let paging: [String: Any] = [
+            "__type": "IndexedPageView:#Exchange",
+            "MaxEntriesReturned": maxCount,
+            "Offset": offset,
+            "BasePoint": "Beginning"
+        ]
+        let parentFolder: [String: Any] = [
+            "__type": "DistinguishedFolderId:#Exchange",
+            "Id": folderId
+        ]
+        let body: [String: Any] = [
+            "__type": "FindItemRequest:#Exchange",
+            "ItemShape": itemShape(),
+            "ParentFolderIds": [parentFolder],
+            "ViewFilter": "All",
+            "Paging": paging,
+            "SortOrder": "Descending",
+            "Traversal": "Shallow"
+        ]
+        let request: [String: Any] = [
             "__type": "FindItemJsonRequest:#Exchange",
             "Header": defaultHeader(),
-            "Body": [
-                "__type": "FindItemRequest:#Exchange",
-                "ItemShape": [
-                    "__type": "ItemResponseShape:#Exchange",
-                    "BaseShape": "AllProperties"
-                ],
-                "ParentFolderIds": [
-                    ["__type": "DistinguishedFolderId:#Exchange", "Id": folderId]
-                ],
-                "ViewFilter": "All",
-                "Paging": [
-                    "__type": "IndexedPageView:#Exchange",
-                    "MaxEntriesReturned": maxCount,
-                    "Offset": offset,
-                    "BasePoint": "Beginning"
-                ],
-                "SortOrder": "Descending",
-                "Traversal": "Shallow"
-            ]
+            "Body": body
         ]
-        return try await execute("/owa/service.svc?action=FindItem", body: jsonString([item]))
+        return try await execute("/owa/service.svc?action=FindItem", body: jsonString([request]))
     }
 
     func getMailItem(itemId: String) async throws -> String {
-        let item: [String: Any] = [
+        let itemIdDict: [String: Any] = ["__type": "ItemId:#Exchange", "Id": itemId]
+        let body: [String: Any] = [
+            "__type": "GetItemRequest:#Exchange",
+            "ItemShape": itemShape(),
+            "ItemIds": [itemIdDict]
+        ]
+        let request: [String: Any] = [
             "__type": "GetItemJsonRequest:#Exchange",
             "Header": defaultHeader(),
-            "Body": [
-                "__type": "GetItemRequest:#Exchange",
-                "ItemShape": [
-                    "__type": "ItemResponseShape:#Exchange",
-                    "BaseShape": "AllProperties"
-                ],
-                "ItemIds": [
-                    ["__type": "ItemId:#Exchange", "Id": itemId]
-                ]
-            ]
+            "Body": body
         ]
-        return try await execute("/owa/service.svc?action=GetItem", body: jsonString([item]))
+        return try await execute("/owa/service.svc?action=GetItem", body: jsonString([request]))
     }
 
     func markAsRead(itemId: String) async throws -> String {
-        let item: [String: Any] = [
+        let fieldUri: [String: Any] = ["__type": "FieldURI:#Exchange", "FieldURI": "message:IsRead"]
+        let message: [String: Any] = ["__type": "Message:#Exchange", "IsRead": true]
+        let update: [String: Any] = [
+            "__type": "SetItemField:#Exchange",
+            "FieldURI": fieldUri,
+            "Message": message
+        ]
+        let itemIdDict: [String: Any] = ["__type": "ItemId:#Exchange", "Id": itemId]
+        let change: [String: Any] = [
+            "__type": "ItemChange:#Exchange",
+            "ItemId": itemIdDict,
+            "Updates": [update]
+        ]
+        let body: [String: Any] = [
+            "__type": "UpdateItemRequest:#Exchange",
+            "ItemChanges": [change]
+        ]
+        let request: [String: Any] = [
             "__type": "UpdateItemJsonRequest:#Exchange",
             "Header": defaultHeader(),
-            "Body": [
-                "__type": "UpdateItemRequest:#Exchange",
-                "ItemChanges": [
-                    [
-                        "__type": "ItemChange:#Exchange",
-                        "ItemId": ["__type": "ItemId:#Exchange", "Id": itemId],
-                        "Updates": [
-                            [
-                                "__type": "SetItemField:#Exchange",
-                                "FieldURI": ["__type": "FieldURI:#Exchange", "FieldURI": "message:IsRead"],
-                                "Message": ["__type": "Message:#Exchange", "IsRead": true]
-                            ]
-                        ]
-                    ]
-                ]
-            ]
+            "Body": body
         ]
-        return try await execute("/owa/service.svc?action=UpdateItem", body: jsonString([item]))
+        return try await execute("/owa/service.svc?action=UpdateItem", body: jsonString([request]))
     }
 
     func moveToDeleted(itemId: String) async throws -> String {
-        let item: [String: Any] = [
+        let itemIdDict: [String: Any] = ["__type": "ItemId:#Exchange", "Id": itemId]
+        let toFolder: [String: Any] = ["__type": "DistinguishedFolderId:#Exchange", "Id": "deleteditems"]
+        let body: [String: Any] = [
+            "__type": "MoveItemRequest:#Exchange",
+            "ItemIds": [itemIdDict],
+            "ToFolderId": toFolder
+        ]
+        let request: [String: Any] = [
             "__type": "MoveItemJsonRequest:#Exchange",
             "Header": defaultHeader(),
-            "Body": [
-                "__type": "MoveItemRequest:#Exchange",
-                "ItemIds": [
-                    ["__type": "ItemId:#Exchange", "Id": itemId]
-                ],
-                "ToFolderId": ["__type": "DistinguishedFolderId:#Exchange", "Id": "deleteditems"]
-            ]
+            "Body": body
         ]
-        return try await execute("/owa/service.svc?action=MoveItem", body: jsonString([item]))
+        return try await execute("/owa/service.svc?action=MoveItem", body: jsonString([request]))
     }
 
     func resolveNames(query: String) async throws -> String {
-        let item: [String: Any] = [
+        let body: [String: Any] = [
+            "__type": "ResolveNamesRequest:#Exchange",
+            "ReturnFullContactData": true,
+            "SearchScope": "ActiveDirectory",
+            "UnresolvedEntry": query
+        ]
+        let request: [String: Any] = [
             "__type": "ResolveNamesJsonRequest:#Exchange",
             "Header": defaultHeader(),
-            "Body": [
-                "__type": "ResolveNamesRequest:#Exchange",
-                "ReturnFullContactData": true,
-                "SearchScope": "ActiveDirectory",
-                "UnresolvedEntry": query
-            ]
+            "Body": body
         ]
-        return try await execute("/owa/service.svc?action=ResolveNames", body: jsonString([item]))
+        return try await execute("/owa/service.svc?action=ResolveNames", body: jsonString([request]))
     }
 
     func findPeople(query: String) async throws -> String {
-        let item: [String: Any] = [
+        let body: [String: Any] = [
+            "__type": "FindPeopleRequest:#Exchange",
+            "SearchPeopleSuggestionIndex": true,
+            "Query": query
+        ]
+        let request: [String: Any] = [
             "__type": "FindPeopleJsonRequest:#Exchange",
             "Header": defaultHeader(),
-            "Body": [
-                "__type": "FindPeopleRequest:#Exchange",
-                "SearchPeopleSuggestionIndex": true,
-                "Query": query
-            ]
+            "Body": body
         ]
-        return try await execute("/owa/service.svc?action=FindPeople", body: jsonString([item]))
+        return try await execute("/owa/service.svc?action=FindPeople", body: jsonString([request]))
     }
 
     func sendMail(
@@ -301,38 +314,49 @@ final class ExchangeApiClient: NSObject {
     ) async throws -> String {
 
         func recipientJson(_ r: Recipient) -> [String: Any] {
-            ["__type": "EmailAddress:#Exchange", "Name": r.name, "Address": r.emailAddress, "MailboxType": r.mailboxType]
+            let dict: [String: Any] = [
+                "__type": "EmailAddress:#Exchange",
+                "Name": r.name,
+                "Address": r.emailAddress,
+                "MailboxType": r.mailboxType
+            ]
+            return dict
         }
+
+        let bodyContent: [String: Any] = [
+            "__type": "BodyContent:#Exchange",
+            "ContentType": "HTML",
+            "Content": body
+        ]
 
         var message: [String: Any] = [
             "__type": "Message:#Exchange",
             "Subject": subject,
-            "Body": [
-                "__type": "BodyContent:#Exchange",
-                "ContentType": "HTML",
-                "Content": body
-            ],
+            "Body": bodyContent,
             "ToRecipients": toRecipients.map(recipientJson)
         ]
         if !ccRecipients.isEmpty { message["CcRecipients"] = ccRecipients.map(recipientJson) }
         if !bccRecipients.isEmpty { message["BccRecipients"] = bccRecipients.map(recipientJson) }
         if !attachments.isEmpty {
-            message["Attachments"] = attachments.map { att -> [String: Any] in
-                [
+            let atts: [[String: Any]] = attachments.map { att -> [String: Any] in
+                let d: [String: Any] = [
                     "__type": "FileAttachment:#Exchange",
                     "Name": att.name,
                     "ContentType": att.contentType,
                     "Content": att.data.base64EncodedString(),
                     "IsInline": false
                 ]
+                return d
             }
+            message["Attachments"] = atts
         }
 
+        let saveFolder: [String: Any] = ["__type": "DistinguishedFolderId:#Exchange", "Id": "sentitems"]
         let bodyJson: [String: Any] = [
             "__type": "CreateItemRequest:#Exchange",
             "Items": [message],
             "MessageDisposition": "SendAndSaveCopy",
-            "SaveFolderId": ["__type": "DistinguishedFolderId:#Exchange", "Id": "sentitems"]
+            "SaveFolderId": saveFolder
         ]
 
         let full: [String: Any] = [
@@ -345,21 +369,21 @@ final class ExchangeApiClient: NSObject {
 
     func getAttachmentBytes(itemId: String, attachmentId: String) async -> Data? {
         do {
-            let item: [String: Any] = [
+            let attId: [String: Any] = [
+                "__type": "AttachmentId:#Exchange",
+                "Id": attachmentId,
+                "RootItemId": itemId
+            ]
+            let body: [String: Any] = [
+                "__type": "GetAttachmentRequest:#Exchange",
+                "AttachmentIds": [attId]
+            ]
+            let request: [String: Any] = [
                 "__type": "GetAttachmentJsonRequest:#Exchange",
                 "Header": defaultHeader(),
-                "Body": [
-                    "__type": "GetAttachmentRequest:#Exchange",
-                    "AttachmentIds": [
-                        [
-                            "__type": "AttachmentId:#Exchange",
-                            "Id": attachmentId,
-                            "RootItemId": itemId
-                        ]
-                    ]
-                ]
+                "Body": body
             ]
-            let json = try await execute("/owa/service.svc?action=GetAttachment", body: jsonString([item]))
+            let json = try await execute("/owa/service.svc?action=GetAttachment", body: jsonString([request]))
             guard let data = json.data(using: .utf8),
                   let arr = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]],
                   let response = arr.first,
