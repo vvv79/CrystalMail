@@ -12,6 +12,7 @@ struct LoginView: View {
     @State private var statusText = ""
 
     private let defaultServerUrl = "https://mail.crystal-management.kz"
+    private let defaultDomain = "DC1"
 
     var body: some View {
         ZStack {
@@ -46,10 +47,13 @@ struct LoginView: View {
             }
         }
         .onAppear {
-            serverUrl = AppSettings.shared.serverUrl.isEmpty ? defaultServerUrl : AppSettings.shared.serverUrl
-            domain = AppSettings.shared.domain
+            serverUrl = defaultServerUrl
+            domain = defaultDomain
             fullLogin = AppSettings.shared.fullLogin
             password = CredentialStore.shared.password
+            if !fullLogin.isEmpty && !password.isEmpty {
+                startLogin()
+            }
         }
     }
 
@@ -64,18 +68,7 @@ struct LoginView: View {
                     .frame(maxWidth: .infinity, alignment: .center)
                     .padding(.bottom, 12)
 
-                TextField("URL сервера (https://mail.company.com)", text: $serverUrl)
-                    .textFieldStyle(.roundedBorder)
-                    .autocapitalization(.none)
-                    .disableAutocorrection(true)
-                    .keyboardType(.URL)
-
-                TextField("Домен (опционально)", text: $domain)
-                    .textFieldStyle(.roundedBorder)
-                    .autocapitalization(.none)
-                    .disableAutocorrection(true)
-
-                TextField("Логин (user@company.com)", text: $fullLogin)
+                TextField("Логин", text: $fullLogin)
                     .textFieldStyle(.roundedBorder)
                     .autocapitalization(.none)
                     .disableAutocorrection(true)
