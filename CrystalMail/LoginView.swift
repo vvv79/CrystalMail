@@ -11,6 +11,8 @@ struct LoginView: View {
     @State private var loggingIn = false
     @State private var statusText = ""
 
+    private let defaultServerUrl = "https://mail.crystal-management.kz"
+
     var body: some View {
         ZStack {
             if loggingIn {
@@ -44,7 +46,7 @@ struct LoginView: View {
             }
         }
         .onAppear {
-            serverUrl = AppSettings.shared.serverUrl
+            serverUrl = AppSettings.shared.serverUrl.isEmpty ? defaultServerUrl : AppSettings.shared.serverUrl
             domain = AppSettings.shared.domain
             fullLogin = AppSettings.shared.fullLogin
             password = CredentialStore.shared.password
@@ -160,7 +162,17 @@ struct OWAWebLoginView: UIViewRepresentable {
             startPolling(webView)
         }
 
+        private func jsEscape(_ s: String) -> String {
+            return s
+                .replacingOccurrences(of: "\\", with: "\\\\")
+                .replacingOccurrences(of: "'", with: "\\'")
+                .replacingOccurrences(of: "\n", with: "\\n")
+                .replacingOccurrences(of: "\r", with: "\\r")
+        }
+
         private func injectCredentials(into webView: WKWebView) {
+            let user = jsEscape(loginField)
+            let pass = jsEscape(parent.password)
             let js = """
             (function() {
                 function fill(id, val) {
@@ -168,14 +180,16 @@ struct OWAWebLoginView: UIViewRepresentable {
                     if (el) { el.value = val; el.dispatchEvent(new Event('input', {bubbles:true})); el.dispatchEvent(new Event('change', {bubbles:true})); return true; }
                     return false;
                 }
-                fill('username','\(loginField)');
-                fill('password','\(parent.password)');
-                fill('loginfmt','\(loginField)');
-                fill('passwd','\(parent.password)');
+                fill('username','\(user)');
+                fill('password','\(pass)');
+                fill('loginfmt','\(user)');
+                fill('passwd','\(pass)');
+                if (typeof clkLgn === 'function') { setTimeout(function(){ clkLgn(); }, 300); return 'clkLgn'; }
                 var btn = document.getElementById('SubmitCreds') || document.querySelector('input[type="submit"]') || document.querySelector('button[type="submit"]');
-                if (btn) { setTimeout(function(){ btn.click(); }, 200); }
-                else { var f = document.querySelector('form'); if (f) f.submit(); }
-                return 'ok';
+                if (btn) { setTimeout(function(){ btn.click(); }, 300); return 'btn'; }
+                var f = document.logonForm || document.querySelector('form');
+                if (f) { f.submit(); return 'form'; }
+                return 'none';
             })();
             """
             webView.evaluateJavaScript(js, completionHandler: nil)
