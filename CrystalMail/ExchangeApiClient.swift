@@ -459,15 +459,26 @@ extension ExchangeApiClient: URLSessionTaskDelegate {
         ExchangeApiClient.respond(to: challenge, completionHandler)
     }
 
+    static let corporateCABase64 = "MIIDCTCCAfGgAwIBAgIQbRE17NFuqa5NQf/yqukOYzANBgkqhkiG9w0BAQ0FADAXMRUwEwYDVQQDEwxEQzEtQUxBLTAtQ0EwHhcNMTYwODMwMTAxOTAzWhcNNDYwODMwMTAyOTAzWjAXMRUwEwYDVQQDEwxEQzEtQUxBLTAtQ0EwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQCoa7pd4iz32vHTjFwPEokc9R30Ig5QDxvCtSHUVLikCs4b2yYcGpNSE9fxYuTeOND+yZaqpXZ8inWNjJxVXGqA7YegH8glDES9Blp9FpNBBBw7GPLrE1Pk1D/eYwIN7AZ9CefDTbp6elMPxEkEDrO1PyTaudVG37wh/O1Y231g8G3Nzrk5dqjGGZ1d61ayckwDGfZycKhZP3FDHzDfJ6EnuV1VY5Go8IjShVn+Cpt13kLhxf1/pTi7GfW07APzLcOimvglws5MLxCFadWIb4DEFfb1FHhxoNjGUF3ETZp0rPS3oeoaV9jv40xOCkXNC3KJUYSApvGN//yEgJKpMChtAgMBAAGjUTBPMAsGA1UdDwQEAwIBhjAPBgNVHRMBAf8EBTADAQH/MB0GA1UdDgQWBBTNMsG+WfbjbpDa7cIQT9qMHtKzMzAQBgkrBgEEAYI3FQEEAwIBADANBgkqhkiG9w0BAQ0FAAOCAQEAjldpyPgPXsxHFb31OmzwJhwc5XQ1rMQpwyU+v4AMbCfTaIHS3awSHMcA+53rEv2qOjgzbMmeZ5KKeLGnTV55XIqT4pqXB2/r4FUfSrrMOTdZkbHnKXgZ+sCRtPoejET0WSWfeyzOzVnABCjnnNQhW3UfapEuRUYq8ellqznW5NY5MoZRYLgKC9qWn903TjawS6skEKXG6aix0AH2BYcq2F2b/sRJE9EfVsf6uFE7ZsRwhlOP+qPmxUASNNoumP4yVDhYJyCrtKhbst3n46v4/jSIaIaqxggvrO2QLegdZmZUoG7c85LUnKUQ1WbBCB+vw+BRGweN1mTvNNE1D8gVPA=="
+
+    static func trustAnchors() -> [SecCertificate] {
+        guard let data = Data(base64Encoded: corporateCABase64),
+              let cert = SecCertificateCreateWithData(nil, data as CFData) else {
+            return []
+        }
+        return [cert]
+    }
+
     static func respond(
         to challenge: URLAuthenticationChallenge,
         _ completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void
     ) {
         if challenge.protectionSpace.authenticationMethod == NSURLAuthenticationMethodServerTrust,
            let trust = challenge.protectionSpace.serverTrust {
-            if let chain = SecTrustCopyCertificateChain(trust) as? [SecCertificate], let leaf = chain.first {
-                SecTrustSetAnchorCertificates(trust, [leaf] as CFArray)
-                SecTrustSetAnchorCertificatesOnly(trust, false)
+            let anchors = trustAnchors()
+            if !anchors.isEmpty {
+                SecTrustSetAnchorCertificates(trust, anchors as CFArray)
+                SecTrustSetAnchorCertificatesOnly(trust, true)
             }
             completionHandler(.useCredential, URLCredential(trust: trust))
         } else {
