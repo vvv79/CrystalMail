@@ -48,7 +48,7 @@ final class AppState: ObservableObject {
             } else {
                 diag = "T3"
             }
-            var msg = diag + " | " + ns.domain + " " + String(ns.code) + " | " + ns.localizedDescription
+            var msg = diag + " " + String(ns.code) + " | " + ns.domain + " | " + ns.localizedDescription
             msg += " | chal=" + ExchangeApiClient.lastChallengeMethod
             msg += " trust=" + String(ExchangeApiClient.lastTrustOK)
             if ExchangeApiClient.lastTrustError != "-" {

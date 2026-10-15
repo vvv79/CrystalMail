@@ -52,9 +52,10 @@ struct LoginView: View {
 
                 if let error = app.errorMessage {
                     VStack(spacing: 8) {
-                        Text(String(error.prefix(4)))
-                            .font(.system(size: 40, weight: .bold, design: .monospaced))
+                        Text(error.components(separatedBy: "|").first?.trimmingCharacters(in: .whitespaces) ?? error)
+                            .font(.system(size: 36, weight: .bold, design: .monospaced))
                             .foregroundColor(.red)
+                            .multilineTextAlignment(.center)
 
                         Text(error)
                             .font(.footnote)
