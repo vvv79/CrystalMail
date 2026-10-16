@@ -91,6 +91,9 @@ final class AppState: ObservableObject {
             let items = ExchangeJsonParser.parseNewMailItems(json)
             mails = items
             hasMore = items.count >= pageSize
+            if items.isEmpty {
+                errorMessage = "Ответ сервера: " + String(json.prefix(220))
+            }
         } catch {
             errorMessage = error.localizedDescription + " [браузер: " + WebTransport.shared.statusText + "]"
         }

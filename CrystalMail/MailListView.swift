@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct MailListView: View {
     @EnvironmentObject var app: AppState
@@ -19,7 +20,16 @@ struct MailListView: View {
                         .foregroundColor(.secondary)
                     Text("Писем нет").foregroundColor(.secondary)
                     if let err = app.errorMessage {
-                        Text(err).font(.footnote).foregroundColor(.red)
+                        Text(err)
+                            .font(.footnote)
+                            .foregroundColor(.red)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal)
+                            .textSelection(.enabled)
+                        Button("Скопировать текст") {
+                            UIPasteboard.general.string = err
+                        }
+                        .font(.footnote)
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
