@@ -86,6 +86,12 @@ final class WebTransport: NSObject, WKNavigationDelegate {
         }
     }
 
+    private func actionName(_ endpoint: String) -> String {
+        guard let range = endpoint.range(of: "action=") else { return "" }
+        let rest = endpoint[range.upperBound...]
+        return String(rest.prefix(while: { $0 != "&" }))
+    }
+
     private func canary() -> String {
         if let url = URL(string: baseUrl),
            let c = HTTPCookieStorage.shared.cookies(for: url)?.first(where: { $0.name == "X-OWA-CANARY" }) {
@@ -110,6 +116,7 @@ final class WebTransport: NSObject, WKNavigationDelegate {
 
         let bodyB64 = Data(body.utf8).base64EncodedString()
         let canaryValue = canary().replacingOccurrences(of: "'", with: "")
+        let action = actionName(endpoint)
         let js = """
         (function(){
           try {
@@ -117,6 +124,8 @@ final class WebTransport: NSObject, WKNavigationDelegate {
             xhr.open('POST', '\(endpoint)', false);
             xhr.setRequestHeader('Content-Type','application/json; charset=utf-8');
             xhr.setRequestHeader('X-OWA-CANARY','\(canaryValue)');
+            xhr.setRequestHeader('Action','\(action)');
+            xhr.setRequestHeader('X-OWA-ActionName','\(action)');
             var bin = atob('\(bodyB64)');
             var bytes = new Uint8Array(bin.length);
             for (var i=0;i<bin.length;i++){ bytes[i]=bin.charCodeAt(i); }
