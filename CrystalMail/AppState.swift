@@ -31,6 +31,18 @@ final class AppState: ObservableObject {
         CredentialStore.shared.password = password
         isLoading = true
         defer { isLoading = false }
+
+        // Probe with default handling (no custom delegate) to see the raw error code
+        var probe = "ok"
+        do {
+            let base = serverUrl.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+            if let u = URL(string: base + "/owa/") {
+                _ = try await URLSession.shared.data(from: u)
+            }
+        } catch {
+            probe = "P" + String((error as NSError).code)
+        }
+
         do {
             let s = MailSession(serverUrl: serverUrl, mailbox: login, domain: domain, displayName: "")
             let client = ExchangeApiClient(session: s)
@@ -48,7 +60,7 @@ final class AppState: ObservableObject {
             } else {
                 diag = "T3"
             }
-            var msg = diag + " " + String(ns.code) + " | " + ns.domain + " | " + ns.localizedDescription
+            var msg = diag + " " + String(ns.code) + " " + probe + " | " + ns.domain + " | " + ns.localizedDescription
             msg += " | chal=" + ExchangeApiClient.lastChallengeMethod
             msg += " trust=" + String(ExchangeApiClient.lastTrustOK)
             if ExchangeApiClient.lastTrustError != "-" {
