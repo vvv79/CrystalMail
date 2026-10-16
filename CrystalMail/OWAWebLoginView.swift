@@ -31,6 +31,7 @@ struct OWAWebLoginView: UIViewRepresentable {
         let parent: OWAWebLoginView
         private var timer: Timer?
         private var attempts = 0
+        private var didAutoSubmit = false
 
         init(_ parent: OWAWebLoginView) { self.parent = parent }
 
@@ -65,7 +66,16 @@ struct OWAWebLoginView: UIViewRepresentable {
 
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
             DispatchQueue.main.async { self.parent.status = "Страница входа загружена" }
-            injectCredentials(into: webView)
+            // Auto-fill and submit only once; afterwards leave the form editable.
+            if !didAutoSubmit {
+                webView.evaluateJavaScript("document.querySelector('input[type=password]') != null") { [weak self] result, _ in
+                    guard let self = self else { return }
+                    if let has = result as? Bool, has {
+                        self.didAutoSubmit = true
+                        self.injectCredentials(into: webView)
+                    }
+                }
+            }
             startPolling(webView)
         }
 
