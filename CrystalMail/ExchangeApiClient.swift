@@ -219,9 +219,18 @@ final class ExchangeApiClient: NSObject {
     }
 
     private func defaultHeader() -> [String: Any] {
+        let tzDefinition: [String: Any] = [
+            "__type": "TimeZoneDefinitionType:#Exchange",
+            "Id": "Central Asia Standard Time"
+        ]
+        let tzContext: [String: Any] = [
+            "__type": "TimeZoneContext:#Exchange",
+            "TimeZoneDefinition": tzDefinition
+        ]
         let header: [String: Any] = [
             "__type": "JsonRequestHeaders:#Exchange",
-            "RequestServerVersion": "Exchange2013"
+            "RequestServerVersion": "Exchange2013",
+            "TimeZoneContext": tzContext
         ]
         return header
     }
