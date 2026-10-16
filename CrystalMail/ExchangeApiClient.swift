@@ -256,14 +256,23 @@ final class ExchangeApiClient: NSObject {
             "__type": "DistinguishedFolderId:#Exchange",
             "Id": folderId
         ]
+        let sortPath: [String: Any] = [
+            "__type": "PropertyUri:#Exchange",
+            "FieldURI": "DateTimeReceived"
+        ]
+        let sortOrder: [String: Any] = [
+            "__type": "SortResults:#Exchange",
+            "Order": "Descending",
+            "Path": sortPath
+        ]
         let body: [String: Any] = [
             "__type": "FindItemRequest:#Exchange",
             "ItemShape": itemShape(),
             "ParentFolderIds": [parentFolder],
-            "ViewFilter": "All",
+            "Traversal": "Shallow",
             "Paging": paging,
-            "SortOrder": "Descending",
-            "Traversal": "Shallow"
+            "ViewFilter": "All",
+            "SortOrder": [sortOrder]
         ]
         let request: [String: Any] = [
             "__type": "FindItemJsonRequest:#Exchange",
