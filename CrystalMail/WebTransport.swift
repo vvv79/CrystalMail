@@ -1,5 +1,6 @@
 import Foundation
 import WebKit
+import UIKit
 
 @MainActor
 final class WebTransport: NSObject, WKNavigationDelegate {
@@ -8,19 +9,24 @@ final class WebTransport: NSObject, WKNavigationDelegate {
     private var webView: WKWebView?
     private var baseUrl = ""
     private(set) var isReady = false
+    private(set) var statusText = "не запущен"
 
     private override init() { super.init() }
 
     func start(serverUrl: String) {
         guard webView == nil else { return }
         baseUrl = serverUrl.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        statusText = "запуск"
 
         let config = WKWebViewConfiguration()
         config.websiteDataStore = .nonPersistent()
-        let wv = WKWebView(frame: CGRect(x: 0, y: 0, width: 1, height: 1), configuration: config)
+        let wv = WKWebView(frame: CGRect(x: 1, y: 1, width: 2, height: 2), configuration: config)
         wv.navigationDelegate = self
+        wv.isOpaque = false
+        wv.backgroundColor = .clear
         wv.customUserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
         webView = wv
+        attachToWindow(wv)
 
         let store = wv.configuration.websiteDataStore.httpCookieStore
         let cookies = HTTPCookieStorage.shared.cookies ?? []
@@ -37,14 +43,29 @@ final class WebTransport: NSObject, WKNavigationDelegate {
         }
     }
 
+    private func attachToWindow(_ wv: WKWebView) {
+        let window = UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .flatMap { $0.windows }
+            .first { $0.isKeyWindow }
+        if let window = window {
+            wv.frame = CGRect(x: 1, y: 1, width: 2, height: 2)
+            wv.alpha = 0.01
+            window.addSubview(wv)
+        }
+    }
+
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         isReady = true
+        statusText = "готов"
     }
     func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
         isReady = true
+        statusText = "ошибка: \(error.localizedDescription)"
     }
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
         isReady = true
+        statusText = "ошибка: \(error.localizedDescription)"
     }
 
     func webView(_ webView: WKWebView, didReceive challenge: URLAuthenticationChallenge,

@@ -91,7 +91,7 @@ final class AppState: ObservableObject {
             mails = items
             hasMore = items.count >= pageSize
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = error.localizedDescription + " [браузер: " + WebTransport.shared.statusText + "]"
         }
     }
 
