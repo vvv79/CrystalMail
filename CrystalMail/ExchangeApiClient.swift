@@ -219,13 +219,9 @@ final class ExchangeApiClient: NSObject {
     }
 
     private func defaultHeader() -> [String: Any] {
-        let sid: [String: Any] = [
-            "__type": "ConnectingSID:#Exchange",
-            "SmtpAddress": session.mailbox
-        ]
         let header: [String: Any] = [
-            "__type": "ExchangeImpersonation:#Exchange",
-            "ConnectingSID": sid
+            "__type": "JsonRequestHeaders:#Exchange",
+            "RequestServerVersion": "Exchange2013"
         ]
         return header
     }
