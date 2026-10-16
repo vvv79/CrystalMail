@@ -3,6 +3,7 @@ import SwiftUI
 @MainActor
 final class AppState: ObservableObject {
     @Published var isLoggedIn: Bool = false
+    @Published var hasCredentials: Bool = !AppSettings.shared.fullLogin.isEmpty && !CredentialStore.shared.password.isEmpty
     @Published var mails: [MailItem] = []
     @Published var currentMail: MailItem? = nil
     @Published var isLoading = false
@@ -77,6 +78,25 @@ final class AppState: ObservableObject {
         isLoggedIn = false
         mails = []
         currentMail = nil
+    }
+
+    func logoutWeb() {
+        AppSettings.shared.fullLogin = ""
+        AppSettings.shared.mailbox = ""
+        CredentialStore.shared.password = ""
+        if let cookies = HTTPCookieStorage.shared.cookies {
+            for c in cookies { HTTPCookieStorage.shared.deleteCookie(c) }
+        }
+        hasCredentials = false
+        isLoggedIn = false
+    }
+
+    func saveCredentials(serverUrl: String, domain: String, login: String, password: String) {
+        AppSettings.shared.serverUrl = serverUrl
+        AppSettings.shared.domain = domain
+        AppSettings.shared.fullLogin = login
+        CredentialStore.shared.password = password
+        hasCredentials = true
     }
 
     func loadFolder(_ folderId: String) async {
