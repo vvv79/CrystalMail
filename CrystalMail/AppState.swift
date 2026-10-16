@@ -2,7 +2,7 @@ import SwiftUI
 
 @MainActor
 final class AppState: ObservableObject {
-    @Published var isLoggedIn: Bool = AppSettings.shared.isLoggedIn
+    @Published var isLoggedIn: Bool = false
     @Published var mails: [MailItem] = []
     @Published var currentMail: MailItem? = nil
     @Published var isLoading = false
@@ -21,6 +21,7 @@ final class AppState: ObservableObject {
 
     func finishLogin(mailbox: String) {
         AppSettings.shared.mailbox = mailbox.isEmpty ? AppSettings.shared.fullLogin : mailbox
+        WebTransport.shared.start(serverUrl: AppSettings.shared.serverUrl)
         isLoggedIn = true
     }
 
