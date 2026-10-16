@@ -13,6 +13,51 @@ struct LoginView: View {
     private let defaultDomain = "DC1"
 
     var body: some View {
+        ZStack {
+            if loggingIn {
+                OWAWebLoginView(
+                    serverUrl: defaultServerUrl,
+                    login: fullLogin,
+                    password: password,
+                    status: $statusText,
+                    onSuccess: { mailbox in
+                        loggingIn = false
+                        AppSettings.shared.serverUrl = defaultServerUrl
+                        AppSettings.shared.domain = defaultDomain
+                        AppSettings.shared.fullLogin = fullLogin
+                        CredentialStore.shared.password = password
+                        app.finishLogin(mailbox: mailbox)
+                    },
+                    onError: { message in
+                        loggingIn = false
+                        app.errorMessage = message
+                    }
+                )
+                .ignoresSafeArea()
+
+                VStack {
+                    Text(statusText)
+                        .font(.footnote)
+                        .padding(8)
+                        .background(Color(.systemBackground).opacity(0.9))
+                        .cornerRadius(8)
+                        .padding(.top, 8)
+                    Spacer()
+                }
+            } else {
+                form
+            }
+        }
+        .onAppear {
+            fullLogin = AppSettings.shared.fullLogin
+            password = CredentialStore.shared.password
+            if !fullLogin.isEmpty && !password.isEmpty {
+                startLogin()
+            }
+        }
+    }
+
+    private var form: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
                 Text("CrystalMail")
@@ -37,7 +82,7 @@ struct LoginView: View {
                         .padding(.vertical, 6)
                 }
                 .buttonStyle(.borderedProminent)
-                .disabled(serverMissing || fullLogin.isEmpty || password.isEmpty || loggingIn)
+                .disabled(fullLogin.isEmpty || password.isEmpty || loggingIn)
                 .padding(.top, 8)
 
                 Button("Открыть OWA в Safari") {
@@ -48,29 +93,13 @@ struct LoginView: View {
                 .font(.footnote)
                 .frame(maxWidth: .infinity, alignment: .center)
 
-                if loggingIn {
-                    HStack(spacing: 8) {
-                        ProgressView()
-                        Text(statusText.isEmpty ? "Вход..." : statusText)
-                            .font(.footnote)
-                            .foregroundColor(.secondary)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .center)
-                }
-
                 if let error = app.errorMessage {
                     VStack(spacing: 8) {
-                        Text(error.components(separatedBy: "|").first?.trimmingCharacters(in: .whitespaces) ?? error)
-                            .font(.system(size: 36, weight: .bold, design: .monospaced))
-                            .foregroundColor(.red)
-                            .multilineTextAlignment(.center)
-
                         Text(error)
                             .font(.footnote)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(.red)
                             .multilineTextAlignment(.center)
                             .textSelection(.enabled)
-
                         Button("Скопировать текст ошибки") {
                             UIPasteboard.general.string = error
                         }
@@ -86,35 +115,16 @@ struct LoginView: View {
             .frame(maxWidth: 520)
             .frame(maxWidth: .infinity)
         }
-        .onAppear {
-            fullLogin = AppSettings.shared.fullLogin
-            password = CredentialStore.shared.password
-            if !fullLogin.isEmpty && !password.isEmpty {
-                startLogin()
-            }
-        }
-    }
-
-    private var serverMissing: Bool {
-        defaultServerUrl.isEmpty
     }
 
     private func startLogin() {
         guard !loggingIn else { return }
-        loggingIn = true
-        statusText = "Вход..."
+        AppSettings.shared.serverUrl = defaultServerUrl
+        AppSettings.shared.domain = defaultDomain
+        AppSettings.shared.fullLogin = fullLogin
+        CredentialStore.shared.password = password
         app.errorMessage = nil
-        Task {
-            let result = await app.login(
-                serverUrl: defaultServerUrl,
-                domain: defaultDomain,
-                login: fullLogin,
-                password: password
-            )
-            loggingIn = false
-            if !result.0 {
-                app.errorMessage = result.1
-            }
-        }
+        statusText = "Выполняется вход..."
+        loggingIn = true
     }
 }

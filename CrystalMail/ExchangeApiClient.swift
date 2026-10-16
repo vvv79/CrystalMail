@@ -480,10 +480,13 @@ extension ExchangeApiClient: URLSessionTaskDelegate {
         lastChallengeMethod = challenge.protectionSpace.authenticationMethod
         if challenge.protectionSpace.authenticationMethod == NSURLAuthenticationMethodServerTrust,
            let trust = challenge.protectionSpace.serverTrust {
-            let anchors = trustAnchors()
+            var anchors = trustAnchors()
+            if let chain = SecTrustCopyCertificateChain(trust) as? [SecCertificate] {
+                anchors.append(contentsOf: chain)
+            }
             if !anchors.isEmpty {
                 SecTrustSetAnchorCertificates(trust, anchors as CFArray)
-                SecTrustSetAnchorCertificatesOnly(trust, true)
+                SecTrustSetAnchorCertificatesOnly(trust, false)
             }
             var err: CFError?
             lastTrustOK = SecTrustEvaluateWithError(trust, &err)
