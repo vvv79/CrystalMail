@@ -158,7 +158,16 @@ final class ExchangeApiClient: NSObject {
     }
 
     private func execute(_ endpoint: String, body: String) async throws -> String {
-        try await executeWithRelogin(endpoint: endpoint, body: body, retry: false)
+        // Prefer the in-page WebKit transport (works with the corporate TLS setup,
+        // exactly like the Android version passes the OWA web session).
+        let viaWeb = await WebTransport.shared.apiCall(endpoint: endpoint, body: body)
+        if !viaWeb.isEmpty {
+            if viaWeb.hasPrefix("ERR:") {
+                throw ApiError.authRequired(viaWeb)
+            }
+            return viaWeb
+        }
+        return try await executeWithRelogin(endpoint: endpoint, body: body, retry: false)
     }
 
     private func executeWithRelogin(endpoint: String, body: String, retry: Bool) async throws -> String {

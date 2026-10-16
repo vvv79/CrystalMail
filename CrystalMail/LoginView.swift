@@ -26,6 +26,7 @@ struct LoginView: View {
                         AppSettings.shared.domain = defaultDomain
                         AppSettings.shared.fullLogin = fullLogin
                         CredentialStore.shared.password = password
+                        WebTransport.shared.start(serverUrl: defaultServerUrl)
                         app.finishLogin(mailbox: mailbox)
                     },
                     onError: { message in
